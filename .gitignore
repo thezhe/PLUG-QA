@@ -1,0 +1,13 @@
+*.wav
+*.h
+*.cpp
+*.png
+/builds/*
+
+data/*/out
+data/signals
+
+tests/*.vst3
+
+!.gitkeep
+!logo.png
