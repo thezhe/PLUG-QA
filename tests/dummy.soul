@@ -5,7 +5,8 @@ namespace main
     graph Processor [[main]]
     {
         input stream float<2> in;
-        output stream float<2> out;
+        output stream float<4> out;
+
 
         connection
         {       
