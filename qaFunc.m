@@ -20,7 +20,7 @@
   % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   % SOFTWARE.
 
-%% qa.m (https://github.com/thezhe/PLUG-QA)
+% qa.m (https://github.com/thezhe/PLUG-QA)
   %
   % Run test cases on an audio plugin (set the default params to the most extreme/prone to artifacts)
   %
@@ -40,10 +40,15 @@
   % Other useful info:
   % - See 'Inputs' section for more info on each test case
   % - Experiencing issues? Try deleting 'inputs/' and 'output/' or restarting Octave
-  %%
 
-%% TODO search soulpatch's sources for plugTime
-%% TODO a way to set plugin parameters
+% TaskList
+  % 
+  % Current Tasks:
+  % - plugTime depends on soulpatch sources 
+  % - normalize vectorscope and make into 2d histogram/heat map
+  %
+  % Future Tasks:
+  % - set plugin parameters? May have to write my own PluginRunner
 
 function qaFunc(Plug, Fs, Bits)
 %%==============================================================================
@@ -551,9 +556,7 @@ function qaFunc(Plug, Fs, Bits)
 
       plot (y(:, 2), y(:, 1), 'LineWidth', 0.5);
       camroll (45);
-    hold off
-
-     
+    hold off 
   endfunction
 
 %%==============================================================================

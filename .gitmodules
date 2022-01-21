@@ -1,3 +1,6 @@
 [submodule "PluginRunner"]
 	path = PluginRunner
 	url = https://github.com/jatinchowdhury18/PluginRunner.git
+[submodule "SameWav"]
+	path = SameWav
+	url = https://github.com/thezhe/SameWav
