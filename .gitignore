@@ -1,13 +1,11 @@
-*.wav
+data/signals
+data/audio/out
+
+tests/*.vst3
+
 *.h
 *.cpp
 *.png
-/builds/*
-
-data/*/out
-data/signals
-
-tests/*.vst3
 
 !.gitkeep
 !logo.png
