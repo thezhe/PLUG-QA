@@ -1,0 +1,15 @@
+/** A stereo processor that passes signals through */
+
+namespace lib
+{
+    graph Processor
+    {
+        input stream float<2> in;
+        output stream float<2> out;
+
+        connection
+        {       
+            in -> out;
+        }
+    }
+}

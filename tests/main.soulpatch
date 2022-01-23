@@ -1,0 +1,16 @@
+{
+    "soulPatchV1": {
+        "ID": "com.TheZhe.PLUGQA.main",
+        "version": "1.0",
+        "name": "errors",
+        "description": "",
+        "category": "effect",
+        "manufacturer": "TheZhe",
+        "website": "https://github.com/thezhe/SOUL-VA",
+        "isInstrument": false,
+        "source": [
+            "main.soul",
+            "lib.soul"
+        ]
+    }
+}

@@ -44,85 +44,111 @@
 % TaskList
   % 
   % Current Tasks:
-  % - plugTime depends on soulpatch sources (parse json)
   % - support arbitrary channel count
+  % - github action
   %
   % Future Tasks:
   % - set plugin parameters? May have to write my own PluginRunner
 
 function qa(Plug, Fs, Bits)
 %%==============================================================================
-%% Main Script
+%% Main function
 
-  SEP = filesep();
+  %define EXTS_*
+  EXTS_SOUL = cellstr(['.soulpatch'; '.soul']);
+  EXTS_PLUGIN_RUNNER = cellstr (['.vst3'; '.component'; '.dll'; '.vst']);
 
-  %set RENDER_CMD
+  MAX_FS = 96000;
+  MIN_FS = 41000;
+
+  VALID_BITS = [16, 24];
+
+  COLOR_ORDER = [1 0 0; 0 1 0; 0 0 1; 1 1 0; 0 1 1; 0 0 0];
+  MAX_NUM_CHANNELS = length (COLOR_ORDER);
+  MAX_NUM_STEREO_CHANNELS = MAX_NUM_CHANNELS / 2;
+
   [PLUG_DIR, PLUG_NAME, PLUG_EXT] = fileparts (Plug);
-  RENDER_CMD = '';
-  if (strEq (PLUG_EXT, '.soul') || strEq (PLUG_EXT, '.soulpatch'))
-    if (ispc() || ismac() || isunix())
-      RENDER_CMD = 'soul render';
-    else
-      error ('OS must be Windows, Mac, or Linux');
-    endif
-  elseif (strEq (PLUG_EXT, '.vst') || strEq (PLUG_EXT, '.vst3') || strEq (PLUG_EXT, '.dll') || strEq (PLUG_EXT, '.component'))
-    if (ispc())
-      RENDER_CMD = ['.' SEP 'PluginRunner' SEP 'PluginRunner.exe'];
-    elseif (ismac())
-      RENDER_CMD = ['.' SEP 'PluginRunner' SEP 'PluginRunnerMac'];
-    elseif (isunix())
-      RENDER_CMD = ['.' SEP 'PluginRunner' SEP 'PluginRunnerLinux'];
-    else
-      error ('OS must be Windows, Mac, or Linux');
-    endif
-  else
-    error ('Only .soul, .soulpatch, .vst, .vst3, .dll, and .component plugins supported');
-  endif
+  PLUG = [PLUG_DIR '/' PLUG_NAME PLUG_EXT ];
 
-  %MORE CONSTANTS
-  DIR_SIGNALS_IN = './data/signals/in';
-  DIR_SIGNALS_OUT = './data/signals/out';
-  DIR_AUDIO_IN = './data/audio/in';
-  DIR_AUDIO_OUT = './data/audio/out';
+  %timestamp
+  timestamp = strftime ("%Y-%m-%d %H:%M:%S", localtime (time ()));
+  printf('\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n');
+  printf(['qa (' PLUG ', ' num2str(Fs) ', ' num2str(Bits) ')\n' timestamp '\n']);
+  printf('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n');
 
   %required packages
   pkg load signal; %specgram
   pkg load statistics; %hist3d 
 
-  %timestamp
-  timestamp = strftime ("%Y-%m-%d %H:%M:%S", localtime (time ()));
-  printf('\n++++++++++++++++++++++++++++++++++++++++\n');
-  printf(['qa(''' Plug ''', ' num2str(Fs) ', ' num2str(Bits) ')\n' timestamp '\n']);
-  printf('++++++++++++++++++++++++++++++++++++++++\n');
+  %define RENDER_CMD
+  printf('\n================================================================================');
+  printf(['\nParsing qa arguments\n\n']);
 
-  %render '/DIR_SIGNALS_IN'
-  persistent frequency = 0;
-  persistent qaTime = 0;
-  [qaInfo, ~, ~] = stat('qa.m');
-
-  if (~isfolder(DIR_SIGNALS_IN) || qaInfo.mtime ~= qaTime || Fs ~= frequency)
-    genSignals(DIR_SIGNALS_IN, Fs, Bits);
+  if (Fs < 44100 || Fs > 96000)
+    error ('Fs must be in the range [44100, 96000]');
   endif
 
-  %render '/outputs'
-  persistent plugTime = 0;
-  [plugInfo, ~, ~] = stat(Plug);
-
-  if (plugInfo.mtime ~= plugTime || qaInfo.mtime ~= qaTime || ~isfolder(DIR_AUDIO_OUT))
-      renderDir(DIR_AUDIO_IN, DIR_AUDIO_OUT);
+  if (~any(VALID_BITS == Bits))
+    error (['Bits must be one of the following values: ' mat2str(VALID_BITS)]);
   endif
 
+  if (anyStrsEq (EXTS_SOUL, PLUG_EXT))
+    systemChecked (['soul errors ' PLUG]);
+    RENDER_CMD = 'soul render';
+  elseif (anyStrsEq (EXTS_PLUGIN_RUNNER, PLUG_EXT))
+    if (ispc())
+      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunner.exe'];
+    elseif (ismac())
+      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunnerMac'];
+    else
+      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunnerLinux'];
+    endif
+  else
+    error ('Only .soulpatch, .soul, .vst3, .component, .dll, and .vst plugins supported');
+  endif
+
+  %set DIR_*
+  DIR_SIGNALS_IN = ['./data' '/' 'signals' '/' 'in'];
+  DIR_SIGNALS_OUT = ['.' '/' 'data' '/' 'signals' '/' 'out'];
+  DIR_AUDIO_IN = ['.' '/' 'data' '/' 'audio' '/' 'in'];
+  DIR_AUDIO_OUT = ['.' '/' 'data' '/' 'audio' '/' 'out'];
+
+  %render conditions
+  persistent prevPlugTime = 0;
+  persistent prevFs = 0;
+  persistent prevQaTime = 0;
+
+  currentPlugTime = getPlugTime (PLUG);
+  currentFs = Fs;
+  currentQaTime = getFileTime ('qa.m');
+
+  MODIFIED_PLUG = (prevPlugTime ~= currentPlugTime);
+  MODIFIED_FS = (prevFs ~= currentFs);
+  MODIFIED_QA = (prevQaTime ~= currentQaTime);
+
+  prevPlugTime = currentPlugTime;
+  prevFs = currentFs;
+  prevQaTime = currentQaTime;
+
+  %render audio
+  if (MODIFIED_PLUG || ~isfolder (DIR_AUDIO_OUT) || MODIFIED_QA)
+    renderDir (DIR_AUDIO_IN, DIR_AUDIO_OUT);
+  endif
+
+  %test audio
   isStableDir(DIR_AUDIO_OUT);
 
-  if (plugInfo.mtime ~= plugTime || qaInfo.mtime ~= qaTime || ~isfolder(DIR_SIGNALS_OUT) || Fs ~= frequency)
-    plugTime = plugInfo.mtime;
-    qaTime = qaInfo.mtime;
-    frequency = Fs;
-
-    renderDir(DIR_SIGNALS_IN, DIR_SIGNALS_OUT);
+  %gen signals
+  if (MODIFIED_FS || ~isfolder (DIR_SIGNALS_IN) || MODIFIED_QA )
+    genSignals (DIR_SIGNALS_IN, Fs, Bits);
   endif
 
-  %plot results using '/DIR_SIGNALS_IN' and '/outputs'
+  %render signals
+  if (MODIFIED_FS || MODIFIED_PLUG || ~isfolder (DIR_SIGNALS_OUT) || MODIFIED_QA)
+    renderDir (DIR_SIGNALS_IN, DIR_SIGNALS_OUT);
+  endif
+  
+  %test signals
   plotSignalsInOut(DIR_SIGNALS_IN, DIR_SIGNALS_OUT);
 
   printf('\n');
@@ -131,12 +157,13 @@ function qa(Plug, Fs, Bits)
   function genSignals(directory, fs, bits)
     %%  Generate input signals 
     %
-    % All signals normalized to 0.5 except except for 'dBRamp.wav'
+    % All signals stereo and normalized to 0.5 except except for 'dBRamp.wav'
     %%
 
     mkdir(directory);
 
-    printf(['\nGenerating signals in ' directory '\n']);
+    printf('\n================================================================================');
+    printf(['\nGenerating signals in ' directory '\n\n']);
 
     genPulse(directory, fs, bits);
     gendBRamp(directory, fs, bits);
@@ -154,9 +181,10 @@ function qa(Plug, Fs, Bits)
 
     mkdir (directoryOut);
 
+    printf('\n================================================================================');
     printf(['\nRendering ' directoryIn ' into ' directoryOut '\n\n']);
 
-    wavIn = glob([directoryIn '/*.wav']);
+    wavIn = glob([directoryIn '/' '*.wav']);
     for i=1:numel(wavIn)
       [~, name, ~] = fileparts (wavIn{i});
       render (wavIn{i}, [directoryOut '/' name '.wav']);
@@ -164,48 +192,29 @@ function qa(Plug, Fs, Bits)
   endfunction
   
   function isStableDir(directory)
+    printf('\n================================================================================');
     printf(['\nTesting stability of ' directory '\n\n']);
 
-    wavFiles = glob([directory '/*.wav']);
+    wavFiles = glob([directory '/' '*.wav']);
     for i=1:numel(wavFiles)
-      isStable(wavFiles{i});
+      audioreadChecked(wavFiles{i});
     endfor
   endfunction
 
   function plotSignalsInOut(directorySignalsIn, directorySignalsOut)
     %%  Plot results using .wav files from 'directorySignalsIn' and 'directorySignalsIn'
 
+    printf('\n================================================================================');
     printf(['\nPlotting ' directorySignalsIn ' vs ' directorySignalsOut '\n\n']);
 
     grid off
 
-    plotSignal([directorySignalsOut '/Pulse.wav'], 'Step Response', 2, [2, 3, 1]); 
-    plotWaveshaper([directorySignalsOut '/dBRamp.wav'], [directorySignalsIn '/dBRamp.wav'], true, 100, 'DC IO Plot', 2, [2, 3, 2]);
-    plotWaveshaper([directorySignalsOut '/SineRamp.wav'], [directorySignalsIn '/SineRamp.wav'], false, 0, 'SineRamp IO Plot', 2, [2, 3, 3]);
-    plotBode([directorySignalsOut '/Impulse.wav'], 'Impulse', 2, [2, 3, 4]);
-    plotVectorscope([directorySignalsOut '/SineSweep2.wav'], 'SineSweep2 Vectorscope', 2, [2, 3, 6]);
-    plotSpec([directorySignalsOut '/SineSweep10.wav'], true, 'SineSweep10 Spectrogram (BW)', 1, [1, 1, 1]);
-
-    isStable([directorySignalsOut, '/Pulse.wav']);
-    isStable([directorySignalsOut, '/Impulse.wav']);
-    isStable([directorySignalsOut, '/SineRamp.wav']);
-    isStable([directorySignalsOut, '/SineSweep2.wav']);
-    isStable([directorySignalsOut, '/SineSweep10.wav']);
-    isStable([directorySignalsOut, '/BSine.wav']);
-    isStable([directorySignalsOut, '/Sine1k.wav']);
-    isStable([directorySignalsOut, '/ZerosSine1k.wav']);
-    
-    gainDiff ([directorySignalsOut '/SineSweep10.wav']); 
-
-    function gainDiff (file2)
-      %% Use with 'outputs/SinSweep.wav' to find makeup gain such that the max output amplitude is 0dB across all sweeped frequencies
-      %  In practice the makeup gain is usually more than the estimated value.
-      [y, ~] = audioread(file2);
-
-      dBDiff = gainTodB (max(max(y)) / 0.5); #input is normalized to 0.5
-
-      printf("Estimated required makeup gain: %.1f dB.\n", -dBDiff);
-    endfunction
+    plotSignal([directorySignalsOut '/' 'Pulse.wav'], 'Step Response', 2, [2, 3, 1]); 
+    plotWaveshaper([directorySignalsOut '/' 'dBRamp.wav'], [directorySignalsIn '/' 'dBRamp.wav'], true, 100, 'DC IO Plot', 2, [2, 3, 2]);
+    plotWaveshaper([directorySignalsOut '/' 'SineRamp.wav'], [directorySignalsIn '/' 'SineRamp.wav'], false, 0, 'SineRamp IO Plot', 2, [2, 3, 3]);
+    plotBode([directorySignalsOut '/' 'Impulse.wav'], 'Impulse', 2, [2, 3, 4]);
+    plotVectorscope([directorySignalsOut '/' 'SineSweep2.wav'], 'SineSweep2 Vectorscope', 2, [2, 3, 6]);
+    plotSpec([directorySignalsOut '/' 'SineSweep10.wav'], true, 'SineSweep10 Spectrogram (BW)', 1, [1, 1, 1]);
   endfunction
   
 %%==============================================================================
@@ -231,7 +240,7 @@ function qa(Plug, Fs, Bits)
 
     y = A1 * sin(wd1*n) + A2 * cos(wd2*n);
 
-    audiowrite([directory '/BSine.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'BSine.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
 
   function gendBRamp(directory, fs, bits)
@@ -245,7 +254,7 @@ function qa(Plug, Fs, Bits)
 
     y = dBtoGain(linspace(-60, 0, 2*Fs)).';
 
-    audiowrite([directory '/dBRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'dBRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction 
 
   function genImpulse(directory, fs, bits)  
@@ -259,7 +268,7 @@ function qa(Plug, Fs, Bits)
 
     y = [0.5; zeros(Fs-1, 1)];
 
-    audiowrite([directory '/Impulse.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Impulse.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
 
   function genPulse(directory, fs, bits)
@@ -276,7 +285,7 @@ function qa(Plug, Fs, Bits)
     y(1:(end/2)) = 0.5;
     y((end/2 + 1):end) = 0.25;
 
-    audiowrite([directory '/Pulse.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Pulse.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
 
   function genSineSweep(directory, fs, bits, len)
@@ -293,7 +302,7 @@ function qa(Plug, Fs, Bits)
 
     y = 0.5 * chirp (t, 0, len, 20000);
     
-    audiowrite([directory '/SineSweep' num2str(len) '.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'SineSweep' num2str(len) '.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
   
   function genSineRamp(directory, fs, bits)
@@ -314,7 +323,7 @@ function qa(Plug, Fs, Bits)
 
     y = A.*sin(wd*n);
 
-    audiowrite([directory '/SineRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'SineRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
 
   function genSine1k(directory, fs, bits)
@@ -332,7 +341,7 @@ function qa(Plug, Fs, Bits)
 
     y = 0.5 * sin (wd*n);
 
-    audiowrite([directory '/Sine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Sine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
 
   function genZerosSine1k(directory, fs, bits)
@@ -354,7 +363,7 @@ function qa(Plug, Fs, Bits)
 
     y(half:end) = 0.5 * sin (wd * n);
 
-    audiowrite([directory '/ZerosSine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'ZerosSine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
   endfunction
   
 %%==============================================================================
@@ -370,8 +379,11 @@ function qa(Plug, Fs, Bits)
     % - 'sp' - three element array to set the subplot
     %%
 
+      set (gca(), 'colororder', COLOR_ORDER)
+
     %FFT
-    [x, fs] = audioread(file);
+    [x, fs] = audioreadChecked(file);
+
     n = length(x);
     df = fs/n;
     f = 0:df:(fs/2);
@@ -385,6 +397,16 @@ function qa(Plug, Fs, Bits)
 
     mag = mag(2:length(mag), :);
     fmag = f(2:end);
+    
+    numChannels = size(mag)(2);
+    
+    magR = cell (1, numChannels);
+    fmagR = cell (1, numChannels);
+
+    for i = 1:numChannels
+      [fmagR(1, i), magR(1, i)] = reducePlot(fmag, mag (:, i), 0.0001);
+    endfor
+    
     [fmagR1, magR1] = reducePlot(fmag, mag(:, 1), 0.0001);
     [fmagR2, magR2] = reducePlot(fmag, mag(:, 2), 0.0001);
     
@@ -398,8 +420,9 @@ function qa(Plug, Fs, Bits)
       xlabel('\fontsize{16}frequency (Hz)');
       ylabel('\fontsize{16}magnitude (dB)');
 
-      plot(fmagR1, magR1, 'LineWidth', 1.5);
-      plot(fmagR2, magR2, 'LineWidth', 1.5);
+      for i=1:numChannels
+        plot (cell2mat(fmagR(i)), cell2mat(magR(i)), 'LineWidth', 1.5);
+      endfor
       xlim([fmag(1), 20000]);
       ylim([-40, 6]);
     hold off
@@ -432,7 +455,14 @@ function qa(Plug, Fs, Bits)
   function plotSpec(file, binary, ttl, fig, sp)
     %%  Plot a spectrogram of a file (max magnitude between all channels)
 
-    [x, fs] = audioread(file);
+      set (gca(), 'colororder', COLOR_ORDER)
+
+    [x, fs] = audioreadChecked(file);
+
+    if (strEq(fileparts(file)(2),"SinSweep10"))
+      dBDiff = gainTodB (max(max(x)) / 0.5); #input is normalized to 0.5
+      printf("Estimated required makeup gain: %.1f dB.\n", -dBDiff);
+    endif
 
     n = floor (1024 * (fs/44100));
     win = blackman(n);
@@ -445,7 +475,7 @@ function qa(Plug, Fs, Bits)
     S1 = abs(S1);
     idx = (S0 > S1);
     S1(idx) = 0;
-    S0(!idx) = 0;
+    S0(~idx) = 0;
     S = S0 + S1;
     S = S/(max(max(S)));
     
@@ -475,7 +505,9 @@ function qa(Plug, Fs, Bits)
   function plotSignal(file, ttl, fig, sp)
     %% Plot a signal from an audio file
 
-    [y, fs] = audioread(file);
+      set (gca(), 'colororder', COLOR_ORDER)
+
+    [y, fs] = audioreadChecked(file);
     info = audioinfo(file);
     t = 0:1/fs:info.Duration-(1/fs);
 
@@ -504,12 +536,16 @@ function qa(Plug, Fs, Bits)
     % - 'res': Set number of points to plot (decimate the signal); set to 0 to plot all points
     %%
 
-    [y, fs] = audioread(file2);
+      set (gca(), 'colororder', COLOR_ORDER)
+
     [x, ~] = audioread(file1);
 
     if (dB)
+      [y, fs] = audioread(file2);
       y = gainTodB(y); 
       x = gainTodB(x); 
+    else
+      [y, fs] = audioreadChecked(file2);
     end
 
     if (res>1)
@@ -544,8 +580,9 @@ function qa(Plug, Fs, Bits)
   function plotVectorscope(file, ttl, fig, sp)
     %% Plot a vector scope from a stereo file 
       % See: https://www.rtw.com/en/blog/focus-the-vectorscope.html
-
-    [y, fs] = audioread(file);
+      set (gca(), 'colororder', COLOR_ORDER)
+    
+    [y, fs] = audioreadChecked(file);
 
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
@@ -571,10 +608,35 @@ function qa(Plug, Fs, Bits)
 %%==============================================================================
 %% Utility
 
-  function isStable(file)
-    %%  Print a warning if any samples > 0.99 or < 0.01
 
-    [y, ~] = audioread(file);
+  function y = getPlugTime(plug)
+    [plugDir, plugName, plugExt] = fileparts(plug); 
+
+    y = getFileTime (plug);
+
+    if (strEq ('.soulpatch', plugExt))
+      plugSource = fromJSON(fileread(plug), false).soulPatchV1.source;
+  
+      if (iscell (plugSource))
+        for i = 1:numel(plugSource)
+          y = max (y, getFileTime ([plugDir '/' char(plugSource(i))]));
+        endfor
+      else 
+        y = max (y, getFileTime ([plugDir '/' plugSource]));
+      endif
+      
+    endif  
+  endfunction
+
+  function y = getFileTime (file)
+    y = stat(file)(1).mtime;
+  endfunction
+
+
+  function [y, fs] = audioreadChecked(file)
+    %%  read audio data and perform some checks
+
+    [y, fs] = audioread(file);
     
     if (any(abs(y) > 0.99))
       warning("%s is unstable or increases peak level to clipping.\n", file);
@@ -585,23 +647,38 @@ function qa(Plug, Fs, Bits)
     endif 
   endfunction
 
-  function render(wavIn, wavOut)
-    status = 0;
+  function systemChecked (command)
+    if (system (command)(1) ~= 0)
+      error ('See message above');
+    endif
+  endfunction
 
+  function render (wavIn, wavOut)
     if (strEq(RENDER_CMD, 'soul render'))
-      [status, ~] = system([RENDER_CMD ' ' Plug ' --input=' wavIn ' --output=' wavOut ' --rate=' num2str(audioinfo(wavIn).SampleRate) ' --bitdepth=' num2str(audioinfo(wavIn).BitsPerSample)]); 
+      systemChecked ([RENDER_CMD ' ' Plug ' --input=' wavIn ' --output=' wavOut ' --rate=' num2str(audioinfo(wavIn).SampleRate) ' --bitdepth=' num2str(audioinfo(wavIn).BitsPerSample)]); 
     else
-      [status, ~] = system([RENDER_CMD ' ' Plug ' ' wavIn ' ' wavOut]);
+      systemChecked ([RENDER_CMD ' ' Plug ' ' wavIn ' ' wavOut]);
     endif
+  endfunction
 
-    if (status != 0)
-        error ('See message printed above');
-    endif
+  function y = anyStrsEq (strs, target)
+  %% see if any strings equal target in strs cell array
+    % if (length(char(strs(1))<2)
+    %   error('strs must be a cell array');
+    % endif
 
+    y = false;
+
+    for i=1:numel(strs)
+      if (strEq (char (strs(i)), target))
+        y = true;
+        return;
+      endif
+    endfor
   endfunction
 
   function y = strEq (str1, str2)
-    if (length(str1) != length(str2))
+    if (length(str1) ~= length(str2))
       y = false;
     else
       y = strncmp (str1, str2, length(str1));
