@@ -1,6 +1,6 @@
-#!/bin/bash
+@echo off
 
-# This script initializes/updates all submodules
+REM This script initializes/updates all submodules
 
 octave qaClear.m
 

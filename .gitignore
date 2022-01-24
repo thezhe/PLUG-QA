@@ -1,11 +1,7 @@
 data/signals
-data/audio/out
+
+results/
 
 tests/*.vst3
 
-*.h
-*.cpp
-*.png
-
 !.gitkeep
-!logo.png

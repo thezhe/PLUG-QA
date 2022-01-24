@@ -38,7 +38,7 @@
   % - logs in terminal
   % - signals are 32 bit float, audio follows the bit depth in audio/in
 
-  % Issues? Try restarting Octave to reset the script's persistent variables. Also try deleting data/signals and data/audio/out.
+  % Issues? Try running 'qaClear'
 
 % TaskList
 
@@ -94,10 +94,11 @@ function qa(Plug, Fs)
   endif
 
   %set DIR_*
-  DIR_SIGNALS_IN = ['./data' '/' 'signals' '/' 'in'];
-  DIR_SIGNALS_OUT = ['.' '/' 'data' '/' 'signals' '/' 'out'];
-  DIR_AUDIO_IN = ['.' '/' 'data' '/' 'audio' '/' 'in'];
-  DIR_AUDIO_OUT = ['.' '/' 'data' '/' 'audio' '/' 'out'];
+  DIR_RENDER = 'results';
+  DIR_SIGNALS_IN = ['./' DIR_RENDER '/signals/in'];
+  DIR_SIGNALS_OUT = ['./' DIR_RENDER '/signals/out'];
+  DIR_AUDIO_IN = './audioIn';
+  DIR_AUDIO_OUT = ['./' DIR_RENDER '/audioOut'];
 
   %render conditions
   persistent prevPlugTime = 0;
@@ -200,7 +201,9 @@ function qa(Plug, Fs)
     plotWaveshaper([directorySignalsOut '/' 'SineRamp.wav'], [directorySignalsIn '/' 'SineRamp.wav'], false, 0, 'SineRamp IO Plot', 2, [2, 3, 3]);
     plotBode([directorySignalsOut '/' 'Impulse.wav'], 'Impulse', 2, [2, 3, 4]);
     plotVectorscope([directorySignalsOut '/' 'SineSweep2.wav'], 'SineSweep2 Vectorscope', 2, [2, 3, 6]);
+    saveas(2, [DIR_RENDER '/signals2.png']);
     plotSpec([directorySignalsOut '/' 'SineSweep10.wav'], true, 'SineSweep10 Spectrogram (BW)', 1, [1, 1, 1]);
+    saveas(1, [DIR_RENDER '/signals1.png']);
   endfunction
   
 %%==============================================================================
@@ -468,38 +471,42 @@ function qa(Plug, Fs)
     win = blackman(n);
     overlap = floor (8 * (fs/44100));
 
-
+    %get max magnitude b/w all channels
     [S, f, t] = specgram (y(:,1), n, fs, win, overlap);
     S = abs(S);
 
     for i = 2:numChannelsOut
-      [S1, ~, ~] = specgram (y(:,2), n, fs, win, overlap);
-      S = max(S, abs(S1));
+      [S1, ~, ~] = specgram (y(:, i), n, fs, win, overlap);
+      S = max (S, abs(S1));
     endfor
 
     %normalize and convert to dB
     S = gainTodB(S/(max(max(S))));
-    
+
     %Black and white binary image
     if (binary)
-      S(abs(S) > 0.001) = 1;
+      S (S > -60) = 0;
     endif
 
     %clamp to [-60, 0dB]
-    S(abs(S)<0.001) = 0.001;
+    S (S < -60) = -60; 
     
-    %spectogram
+    %plot
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
+
     hold on
-      imagesc (t, f, S);
-      colormap (1-gray);
-      ylim([0, 20000]);
-      xlim([0, audioinfo(file).Duration]);
       set(gca, "fontsize", 16);
+
       title(['\fontsize{20}' ttl]);
       ylabel('\fontsize{16}frequency (Hz)');
       xlabel('\fontsize{16}time (s)');
+
+      ylim([0, 20000]);
+      xlim([0, audioinfo(file).Duration]);
+
+      imagesc (t, f, S);
+      colormap (1-gray);
     hold off
   endfunction
 
@@ -536,8 +543,6 @@ function qa(Plug, Fs)
       for i = 1:numChannels
         plot(cell2mat(tR(i)), cell2mat(yR(i)), 'LineWidth', 1.5);
       endfor 
-
-      legend ('location', 'southwest', 'orientation', 'horizontal', 'numcolumns', 3);
     hold off
   endfunction
 
@@ -602,37 +607,36 @@ function qa(Plug, Fs)
       % See: https://www.rtw.com/en/blog/focus-the-vectorscope.html
     
     [y, fs] = audioreadChecked(file);
-
     numChannelsOut = size(y)(2);
+  
+    %normalize
+    y = y/max(max(y)); 
 
+    %plot
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
+    
     hold on;
       set(gca, "linewidth", 1, "fontsize", 16)
-      title(['\fontsize{20}' ttl]);
 
+      title(['\fontsize{20}' ttl]);
       xlabel('\fontsize{16}R');
       ylabel('\fontsize{16}L');
+
       xlim([-1, 1]);
       ylim([-1, 1]);
 
-      y = y/max(max(y)); %normalize
-
-      counts = cell (1, numChannelsOut/2);
-      centers = cell (1, numChannelsOut/2);
-
-      for i = 1:length(counts)
-      %  [counts(i), centers(i)] = hist3(y(:, i:i+1), [100, 100]);
-       % centers(i) = centers(counts(i) > 0.001, :);
-      endfor
-
-      for i = 1:length(counts)
-        %scatter (centers{1}, centers{2}, 1, 'filled');
+      [counts, centers] = hist3 (y (:, 1:2));
+      [r, l] = meshgrid (centers{1}, centers{2});
+      nonzeroIdx = (counts > 0);
+      scatter (r (nonzeroIdx), l (nonzeroIdx), 1, 'filled');
+      for i = 3:2:numChannelsOut
+        [counts, ~] = hist3 (y (:, i:i+1));
+        nonzeroIdx = (counts > 0);
+        scatter (r (nonzeroIdx), l (nonzeroIdx), 1, 'filled');
       endfor
 
       camroll (45);
-
-     % legend ('location', 'southwest', 'orientation', 'horizontal', 'numcolumns', 3);
     hold off 
   endfunction
 
@@ -667,11 +671,11 @@ function qa(Plug, Fs)
     [y, fs] = audioread(file);
     
     if (any(abs(y) > 0.99))
-      warning("%s is unstable or increases peak level to clipping.\n", file);
+      error ("%s is unstable or increases peak level to clipping.\n", file);
     endif
 
     if (max(y) < 0.01)
-      warning("%s is very quite or slient.\n", file);
+      warning ("%s is very quite or slient.\n", file);
     endif 
   endfunction
 
