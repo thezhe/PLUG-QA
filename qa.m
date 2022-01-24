@@ -1,71 +1,65 @@
-% MIT License
+%{ MIT License
 
-  % Copyright (c) 2022 TheZhe
+  Copyright (c) 2022 TheZhe
 
-  % Permission is hereby granted, free of charge, to any person obtaining a copy
-  % of this software and associated documentation files (the "Software"), to deal
-  % in the Software without restriction, including without limitation the rights
-  % to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  % copies of the Software, and to permit persons to whom the Software is
-  % furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-  % The above copyright notice and this permission notice shall be included in all
-  % copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-  % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  % FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  % AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  % LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  % SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+%}
 
-% qa.m (https://github.com/thezhe/PLUG-QA)
-  %
-  % Run test cases on an audio plugin (set the default params to the most extreme/prone to artifacts)
-  %
-  % Requirements:
-  % - The SOUL CLI (soul.exe) must be part of the system PATH
-  % - The plugin must have 2 inputs and 2 outputs (stereo to stereo)
-  % - The plugin must be one of the following formats: .soul, .soulpatch, .vst, .vst3, .dll, or .component
-  %
-  % Arguments:
-  % - Fs:  sampling rate; only values in the range [44100, 96000] are officially supported
-  %
-  % Outputs:
-  % - Graphs of test cases 
-  % - logs in terminal
-  % - Generated .wav files (lossless, 24-bit, 'Fs' sampling rate)
-  %
-  % Other useful info:
-  % - See 'Inputs' section for more info on each test case
-  % - Experiencing issues? Try deleting 'inputs/' and 'output/' or restarting Octave
+%{ qa.m (https://github.com/thezhe/PLUG-QA)
 
-% TaskList
-  % 
-  % Current Tasks:
-  % - support arbitrary channel count
-  % - github action
-  %
-  % Future Tasks:
-  % - set plugin parameters? May have to write my own PluginRunner
+  Run test cases on an audio plugin
 
-function qa(Plug, Fs, Bits)
-%%==============================================================================
-%% Main function
+  Requirements:
+  - The SOUL CLI (soul.exe) must be part of the system PATH
+  - The plugin must have 2 inputs
+  - The plugin must be one of the following formats: .soulpatch, .soul, .vst3, .component, .dll, or .vst 
+
+  Arguments:
+  - Plug: path to the plugin
+  - Fs:  sampling rate within the range [44100, 96000]
+
+  Outputs:
+  - Graphs of system responses
+  - logs in terminal
+  - signals are 32 bit float, audio follows the bit depth in audio/in
+
+  Issues? Try restarting Octave to reset the script's persistent variables.
+%}
+
+%{ TaskList
+
+  Current Tasks:
+  - support arbitrary channel count
+  - github action
+
+  Future Tasks:
+  - set plugin parameters? May have to write my own PluginRunner
+
+%}
+function qa(Plug, Fs)
+%{==============================================================================
+Main function                                                           
+==============================================================================%}
 
   %define EXTS_*
   EXTS_SOUL = cellstr(['.soulpatch'; '.soul']);
   EXTS_PLUGIN_RUNNER = cellstr (['.vst3'; '.component'; '.dll'; '.vst']);
-
-  MAX_FS = 96000;
-  MIN_FS = 41000;
-
-  VALID_BITS = [16, 24];
-
-  COLOR_ORDER = [1 0 0; 0 1 0; 0 0 1; 1 1 0; 0 1 1; 0 0 0];
-  MAX_NUM_CHANNELS = length (COLOR_ORDER);
-  MAX_NUM_STEREO_CHANNELS = MAX_NUM_CHANNELS / 2;
 
   [PLUG_DIR, PLUG_NAME, PLUG_EXT] = fileparts (Plug);
   PLUG = [PLUG_DIR '/' PLUG_NAME PLUG_EXT ];
@@ -73,7 +67,7 @@ function qa(Plug, Fs, Bits)
   %timestamp
   timestamp = strftime ("%Y-%m-%d %H:%M:%S", localtime (time ()));
   printf('\n++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n');
-  printf(['qa (' PLUG ', ' num2str(Fs) ', ' num2str(Bits) ')\n' timestamp '\n']);
+  printf(['qa (' PLUG ', ' num2str(Fs) ')\n' timestamp '\n']);
   printf('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n');
 
   %required packages
@@ -81,15 +75,10 @@ function qa(Plug, Fs, Bits)
   pkg load statistics; %hist3d 
 
   %define RENDER_CMD
-  printf('\n================================================================================');
   printf(['\nParsing qa arguments\n\n']);
 
   if (Fs < 44100 || Fs > 96000)
     error ('Fs must be in the range [44100, 96000]');
-  endif
-
-  if (~any(VALID_BITS == Bits))
-    error (['Bits must be one of the following values: ' mat2str(VALID_BITS)]);
   endif
 
   if (anyStrsEq (EXTS_SOUL, PLUG_EXT))
@@ -140,7 +129,7 @@ function qa(Plug, Fs, Bits)
 
   %gen signals
   if (MODIFIED_FS || ~isfolder (DIR_SIGNALS_IN) || MODIFIED_QA )
-    genSignals (DIR_SIGNALS_IN, Fs, Bits);
+    genSignals (DIR_SIGNALS_IN, Fs);
   endif
 
   %render signals
@@ -154,7 +143,7 @@ function qa(Plug, Fs, Bits)
   printf('\n');
 %%==============================================================================
 %% High-Level
-  function genSignals(directory, fs, bits)
+  function genSignals(directory, fs)
     %%  Generate input signals 
     %
     % All signals stereo and normalized to 0.5 except except for 'dBRamp.wav'
@@ -165,15 +154,15 @@ function qa(Plug, Fs, Bits)
     printf('\n================================================================================');
     printf(['\nGenerating signals in ' directory '\n\n']);
 
-    genPulse(directory, fs, bits);
-    gendBRamp(directory, fs, bits);
-    genSineRamp(directory, fs, bits);
-    genImpulse(directory, fs, bits);
-    genSineSweep(directory, fs, bits, 10);
-    genSineSweep(directory, fs, bits, 2);
-    genBSine(directory, fs, bits);
-    genSine1k(directory, fs, bits);
-    genZerosSine1k(directory, fs, bits);
+    genPulse(directory, fs);
+    gendBRamp(directory, fs);
+    genSineRamp(directory, fs);
+    genImpulse(directory, fs);
+    genSineSweep(directory, fs, 10);
+    genSineSweep(directory, fs, 2);
+    genBSine(directory, fs);
+    genSine1k(directory, fs);
+    genZerosSine1k(directory, fs);
   endfunction
   
   function renderDir(directoryIn, directoryOut)
@@ -220,7 +209,7 @@ function qa(Plug, Fs, Bits)
 %%==============================================================================
 %% Generate Signals
 
-  function genBSine(directory, fs, bits)
+  function genBSine(directory, fs)
     %%  Generate (0.5/6)*sin + (2.5/6)*cos with frequencies 2kHz and 18kHz
     %
     % Notes:
@@ -240,10 +229,10 @@ function qa(Plug, Fs, Bits)
 
     y = A1 * sin(wd1*n) + A2 * cos(wd2*n);
 
-    audiowrite([directory '/' 'BSine.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'BSine.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
 
-  function gendBRamp(directory, fs, bits)
+  function gendBRamp(directory, fs)
     %% Generate a linear ramp on the dB scale from -60 dB to 0 dB 
     %
     % Notes:
@@ -254,10 +243,10 @@ function qa(Plug, Fs, Bits)
 
     y = dBtoGain(linspace(-60, 0, 2*Fs)).';
 
-    audiowrite([directory '/' 'dBRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'dBRamp.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction 
 
-  function genImpulse(directory, fs, bits)  
+  function genImpulse(directory, fs)  
     %% Generate an impulse with amplitude 0.5
     %
     % Notes:
@@ -268,10 +257,10 @@ function qa(Plug, Fs, Bits)
 
     y = [0.5; zeros(Fs-1, 1)];
 
-    audiowrite([directory '/' 'Impulse.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Impulse.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
 
-  function genPulse(directory, fs, bits)
+  function genPulse(directory, fs)
     %% Generate a pulse signal with value 0.5 and 0.25 for the first and second halves
     % 
     % Notes:
@@ -285,10 +274,10 @@ function qa(Plug, Fs, Bits)
     y(1:(end/2)) = 0.5;
     y((end/2 + 1):end) = 0.25;
 
-    audiowrite([directory '/' 'Pulse.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Pulse.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
 
-  function genSineSweep(directory, fs, bits, len)
+  function genSineSweep(directory, fs, len)
     %% Generate a sin sweep from 20 to 20kHz
     % 
     % Notes:
@@ -302,10 +291,10 @@ function qa(Plug, Fs, Bits)
 
     y = 0.5 * chirp (t, 0, len, 20000);
     
-    audiowrite([directory '/' 'SineSweep' num2str(len) '.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'SineSweep' num2str(len) '.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
   
-  function genSineRamp(directory, fs, bits)
+  function genSineRamp(directory, fs)
     %% Generate a sin that fades in linearly
     % 
     % Notes:
@@ -323,10 +312,10 @@ function qa(Plug, Fs, Bits)
 
     y = A.*sin(wd*n);
 
-    audiowrite([directory '/' 'SineRamp.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'SineRamp.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
 
-  function genSine1k(directory, fs, bits)
+  function genSine1k(directory, fs)
     %% Generate a 1kHz sin
     % 
     % Notes:
@@ -341,10 +330,10 @@ function qa(Plug, Fs, Bits)
 
     y = 0.5 * sin (wd*n);
 
-    audiowrite([directory '/' 'Sine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'Sine1k.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
 
-  function genZerosSine1k(directory, fs, bits)
+  function genZerosSine1k(directory, fs)
     %% Generate 0.5 seconds of zeros followed by 0.5 seconds of Sin1k
     % 
     % Notes:
@@ -363,7 +352,7 @@ function qa(Plug, Fs, Bits)
 
     y(half:end) = 0.5 * sin (wd * n);
 
-    audiowrite([directory '/' 'ZerosSine1k.wav'], [y, y], fs, 'BitsPerSample', bits);
+    audiowrite([directory '/' 'ZerosSine1k.wav'], [y, y], fs, 'BitsPerSample', 32);
   endfunction
   
 %%==============================================================================
@@ -379,87 +368,99 @@ function qa(Plug, Fs, Bits)
     % - 'sp' - three element array to set the subplot
     %%
 
-      set (gca(), 'colororder', COLOR_ORDER)
-
-    %FFT
-    [x, fs] = audioreadChecked(file);
-
-    n = length(x);
+    %read
+    [y, fs] = audioreadChecked(file);
+    
+    %f
+    n = length(y);
     df = fs/n;
     f = 0:df:(fs/2);
-    y = fft(x);
+
+    %fft
+    y = fft(y);
     y = y(1:(n/2)+1, :) * 2;  
+
+    %dc magnitude
+    printf(['DC magnitude responses: ' mat2str(gainTodB(abs (y (1, :)))) ' dB']);
+
+    %limit to freq bins to [1, 20000] Hz
+    f = f (f <= 20000);
+    y = y (2:length(f), :);
+    f = f (2:end);
 
     %magnitude
     mag = gainTodB(abs(y));
 
-    printf('DC magnitude response: %s dB\n', num2str(mag(1)));
-
     mag = mag(2:length(mag), :);
     fmag = f(2:end);
     
+    %reduced magnitude
     numChannels = size(mag)(2);
-    
     magR = cell (1, numChannels);
     fmagR = cell (1, numChannels);
 
     for i = 1:numChannels
       [fmagR(1, i), magR(1, i)] = reducePlot(fmag, mag (:, i), 0.0001);
     endfor
-    
-    [fmagR1, magR1] = reducePlot(fmag, mag(:, 1), 0.0001);
-    [fmagR2, magR2] = reducePlot(fmag, mag(:, 2), 0.0001);
-    
+
+    %plot magnitude    
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
+
     hold on 
       set(gca,'xscale','log');
-      set(gca, "linewidth", 1, "fontsize", 16)
+      set(gca, "linewidth", 1, "fontsize", 16);
 
       title('\fontsize{20}Magnitude Response');
       xlabel('\fontsize{16}frequency (Hz)');
       ylabel('\fontsize{16}magnitude (dB)');
 
-      for i=1:numChannels
-        plot (cell2mat(fmagR(i)), cell2mat(magR(i)), 'LineWidth', 1.5);
-      endfor
       xlim([fmag(1), 20000]);
       ylim([-40, 6]);
+
+      for i=1:numChannels
+        plot (cell2mat(fmagR(i)), cell2mat(magR(i)), 'LineWidth', 1.5);
+      endfor  
     hold off
 
     %phase
     p = angle(y);
-    dc = sprintf('%.1f', p (1));
-    ny = sprintf('%.1f', p (end));
+    p = p (2:length(p), :);
+    fp = fmag;
 
-    p = p(2:length(p), :);
-    fp = f(2:end);
-    [fpR1, pR1] = reducePlot(fp, p(:, 1), 0.0001);
-    [fpR2, pR2] = reducePlot(fp, p(:, 2), 0.0001);
+    %reduced phase
+    pR = cell (1, numChannels);
+    fpR = cell (1, numChannels);
 
+    for i = 1:numChannels
+      [fpR(1, i), pR(1, i)] = reducePlot(f, p(:, i), 0.0001);
+    endfor
+
+    %plot phase
     subplot(sp(1), sp(2), sp(3)+1);
     hold on
       set(gca,'xscale','log');
       set(gca, "linewidth", 1, "fontsize", 16);
+
       title(['\fontsize{20}Phase Response']);
       xlabel('\fontsize{16}frequency (Hz)');
       ylabel('\fontsize{16}phase (rad)');
+
       xlim([fp(1), 20000]);
       ylim([-pi, pi]);
       
-      plot(fpR1, pR1, 'LineWidth', 1.5);
-      plot(fpR2, pR2, 'LineWidth', 1.5);
+      for i=1:numChannels
+        plot (cell2mat(fmagR(i)), cell2mat(magR(i)), 'LineWidth', 1.5);
+      endfor
     hold off
   endfunction
 
   function plotSpec(file, binary, ttl, fig, sp)
     %%  Plot a spectrogram of a file (max magnitude between all channels)
 
-      set (gca(), 'colororder', COLOR_ORDER)
-
     [x, fs] = audioreadChecked(file);
 
-    if (strEq(fileparts(file)(2),"SinSweep10"))
+    if (strEq(fileparts(file)(2), 'SinSweep10'))
       dBDiff = gainTodB (max(max(x)) / 0.5); #input is normalized to 0.5
       printf("Estimated required makeup gain: %.1f dB.\n", -dBDiff);
     endif
@@ -505,8 +506,6 @@ function qa(Plug, Fs, Bits)
   function plotSignal(file, ttl, fig, sp)
     %% Plot a signal from an audio file
 
-      set (gca(), 'colororder', COLOR_ORDER)
-
     [y, fs] = audioreadChecked(file);
     info = audioinfo(file);
     t = 0:1/fs:info.Duration-(1/fs);
@@ -535,8 +534,6 @@ function qa(Plug, Fs, Bits)
     % - 'dB': Set to true to make axes dB scale
     % - 'res': Set number of points to plot (decimate the signal); set to 0 to plot all points
     %%
-
-      set (gca(), 'colororder', COLOR_ORDER)
 
     [x, ~] = audioread(file1);
 
@@ -580,7 +577,6 @@ function qa(Plug, Fs, Bits)
   function plotVectorscope(file, ttl, fig, sp)
     %% Plot a vector scope from a stereo file 
       % See: https://www.rtw.com/en/blog/focus-the-vectorscope.html
-      set (gca(), 'colororder', COLOR_ORDER)
     
     [y, fs] = audioreadChecked(file);
 
@@ -608,7 +604,6 @@ function qa(Plug, Fs, Bits)
 %%==============================================================================
 %% Utility
 
-
   function y = getPlugTime(plug)
     [plugDir, plugName, plugExt] = fileparts(plug); 
 
@@ -632,9 +627,7 @@ function qa(Plug, Fs, Bits)
     y = stat(file)(1).mtime;
   endfunction
 
-
   function [y, fs] = audioreadChecked(file)
-    %%  read audio data and perform some checks
 
     [y, fs] = audioread(file);
     
@@ -654,7 +647,7 @@ function qa(Plug, Fs, Bits)
   endfunction
 
   function render (wavIn, wavOut)
-    if (strEq(RENDER_CMD, 'soul render'))
+    if (strEq (RENDER_CMD, 'soul render'))
       systemChecked ([RENDER_CMD ' ' Plug ' --input=' wavIn ' --output=' wavOut ' --rate=' num2str(audioinfo(wavIn).SampleRate) ' --bitdepth=' num2str(audioinfo(wavIn).BitsPerSample)]); 
     else
       systemChecked ([RENDER_CMD ' ' Plug ' ' wavIn ' ' wavOut]);
@@ -662,10 +655,14 @@ function qa(Plug, Fs, Bits)
   endfunction
 
   function y = anyStrsEq (strs, target)
-  %% see if any strings equal target in strs cell array
-    % if (length(char(strs(1))<2)
-    %   error('strs must be a cell array');
-    % endif
+
+    if (~iscell(strs))
+      error('strs must be a cell array');
+    endif
+
+    if (~ischar(target))
+      error('target must be a char array');
+    endif
 
     y = false;
 

@@ -1,6 +1,5 @@
 # These are supported funding model platforms
 
 ko_fi: thezhe
-custom: "https://www.kvraudio.com/developer/thezhe"
+custom: ["https://www.kvraudio.com/developer/thezhe", "https://paypal.me/thezhe"]
 github: thezhe
-custom: "https://paypal.me/thezhe"
