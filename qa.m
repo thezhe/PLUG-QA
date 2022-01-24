@@ -38,7 +38,7 @@
   % - logs in terminal
   % - signals are 32 bit float, audio follows the bit depth in audio/in
 
-  % Issues? Try restarting Octave to reset the script's persistent variables.
+  % Issues? Try restarting Octave to reset the script's persistent variables. Also try deleting data/signals and data/audio/out.
 
 % TaskList
 
