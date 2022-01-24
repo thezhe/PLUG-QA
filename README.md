@@ -1,5 +1,5 @@
 # PLUG-QA
-PLUG-QA is a Quality Assurance (QA) program for audio plugin development (`.vst3`, `.component`, `.dll`, `.vst`, `.soulpatch`, and `.soul`). It displays step, frequency, gain, waveshaper, vectorscope, and spectrogram responses. In addition, the audio in `data/audio` passes through the specified plugin into `results/audio`.
+PLUG-QA is a Quality Assurance (QA) program for audio plugin development (`.vst3`, `.component`, `.dll`, `.vst`, `.soulpatch`, and `.soul`). It displays step, frequency, gain, waveshaper, vectorscope, and spectrogram responses and renders audio files placed in `audioIn`.
 
 ## Check out these projects using PLUG-QA:
 - [SOUL-VA](https://github.com/thezhe/SOUL-VA)
@@ -13,7 +13,7 @@ This project is a work in progress. Only maintained for OCtave on Windows, but s
 - included Git Submodules (run `updateSub.sh`)
 
 ## Contents
-PLUG-QA strives for meaningful code comments and function/variable names. Most users only need to interact with `qa.m` (function) and `qaScript.m` (script) as well as their outputs in `results`.
+PLUG-QA strives for meaningful code comments and function/variable names. Most users only need to run `qa.m` (function) or `qaScript.m` (script) and use their outputs in `results`.
 
 ## Useful Tools:
 - [VS Code](https://code.visualstudio.com/)  
