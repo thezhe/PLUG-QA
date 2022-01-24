@@ -1,61 +1,58 @@
-%{ MIT License
+% MIT License
 
-  Copyright (c) 2022 TheZhe
+  % Copyright (c) 2022 TheZhe
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to deal
-  in the Software without restriction, including without limitation the rights
-  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
+  % Permission is hereby granted, free of charge, to any person obtaining a copy
+  % of this software and associated documentation files (the "Software"), to deal
+  % in the Software without restriction, including without limitation the rights
+  % to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  % copies of the Software, and to permit persons to whom the Software is
+  % furnished to do so, subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be included in all
-  copies or substantial portions of the Software.
+  % The above copyright notice and this permission notice shall be included in all
+  % copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  SOFTWARE.
-%}
+  % THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  % IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  % FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  % AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  % LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  % OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  % SOFTWARE.
 
-%{ qa.m (https://github.com/thezhe/PLUG-QA)
+% qa.m (https://github.com/thezhe/PLUG-QA)
 
-  Run test cases on an audio plugin
+  % Run test cases on an audio plugin
 
-  Requirements:
-  - The SOUL CLI (soul.exe) must be part of the system PATH
-  - The plugin must have 2 inputs
-  - The plugin must be one of the following formats: .soulpatch, .soul, .vst3, .component, .dll, or .vst 
+  % Requirements:
+  % - The SOUL CLI (soul.exe) must be part of the system PATH
+  % - The plugin must have 2 inputs
+  % - The plugin must be one of the following formats: .soulpatch, .soul, .vst3, .component, .dll, or .vst 
 
-  Arguments:
-  - Plug: path to the plugin
-  - Fs:  sampling rate within the range [44100, 96000]
+  % Arguments:
+  % - Plug: path to the plugin
+  % - Fs:  sampling rate within the range [44100, 96000]
 
-  Outputs:
-  - Graphs of system responses
-  - logs in terminal
-  - signals are 32 bit float, audio follows the bit depth in audio/in
+  % Outputs:
+  % - Graphs of system responses
+  % - logs in terminal
+  % - signals are 32 bit float, audio follows the bit depth in audio/in
 
-  Issues? Try restarting Octave to reset the script's persistent variables.
-%}
+  % Issues? Try restarting Octave to reset the script's persistent variables.
 
-%{ TaskList
+% TaskList
 
-  Current Tasks:
-  - support arbitrary channel count
-  - github action
+  % Current Tasks:
+  % - support arbitrary channel count
+  % - github action
 
-  Future Tasks:
-  - set plugin parameters? May have to write my own PluginRunner
+  % Future Tasks:
+  % - set plugin parameters? May have to write my own PluginRunner
 
-%}
 function qa(Plug, Fs)
-%{==============================================================================
-Main function                                                           
-==============================================================================%}
+%==============================================================================
+% Main function                                                           
+%==============================================================================
 
   %define EXTS_*
   EXTS_SOUL = cellstr(['.soulpatch'; '.soul']);
@@ -458,27 +455,30 @@ Main function
   function plotSpec(file, binary, ttl, fig, sp)
     %%  Plot a spectrogram of a file (max magnitude between all channels)
 
-    [x, fs] = audioreadChecked(file);
+    [y, fs] = audioreadChecked(file);
+
+    numChannelsOut = size(y)(2);
 
     if (strEq(fileparts(file)(2), 'SinSweep10'))
-      dBDiff = gainTodB (max(max(x)) / 0.5); #input is normalized to 0.5
+      dBDiff = gainTodB (max(max(y)) / 0.5); #input is normalized to 0.5
       printf("Estimated required makeup gain: %.1f dB.\n", -dBDiff);
     endif
 
     n = floor (1024 * (fs/44100));
     win = blackman(n);
     overlap = floor (8 * (fs/44100));
-    [S0, f, t] = specgram (x(:,1), n, fs, win, overlap);
-    [S1, ~, ~] = specgram (x(:,2), n, fs, win, overlap);
 
-    %bandlimit and normalize
-    S0 = abs(S0);
-    S1 = abs(S1);
-    idx = (S0 > S1);
-    S1(idx) = 0;
-    S0(~idx) = 0;
-    S = S0 + S1;
-    S = S/(max(max(S)));
+
+    [S, f, t] = specgram (y(:,1), n, fs, win, overlap);
+    S = abs(S);
+
+    for i = 2:numChannelsOut
+      [S1, ~, ~] = specgram (y(:,2), n, fs, win, overlap);
+      S = max(S, abs(S1));
+    endfor
+
+    %normalize and convert to dB
+    S = gainTodB(S/(max(max(S))));
     
     %Black and white binary image
     if (binary)
@@ -492,7 +492,7 @@ Main function
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
     hold on
-      imagesc (t, f, gainTodB(S));
+      imagesc (t, f, S);
       colormap (1-gray);
       ylim([0, 20000]);
       xlim([0, audioinfo(file).Duration]);
@@ -507,23 +507,37 @@ Main function
     %% Plot a signal from an audio file
 
     [y, fs] = audioreadChecked(file);
-    info = audioinfo(file);
-    t = 0:1/fs:info.Duration-(1/fs);
 
-    [tR1, yR1] = reducePlot(t, y(:, 1), 0.0001);
-    [tR2, yR2] = reducePlot(t, y(:, 2), 0.0001);
+    %t
+    t = 0:1/fs:audioinfo(file).Duration-(1/fs);
+    
+    %reduced signal
+    numChannels = size(y)(2);
+    yR = cell (1, numChannels);
+    tR = cell (1, numChannels);
 
+    for i = 1:numChannels
+      [tR(1, i), yR(1, i)] = reducePlot(t, y (:, i), 0.0001);
+    endfor
+
+    %plot
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));    
+
     hold on
       set(gca, "linewidth", 1, "fontsize", 16);
+
       title(['\fontsize{20}' ttl]);
-      xlabel('\fontsize{16}t (seconds)');
+      xlabel('\fontsize{16}t (s)');
       ylabel('\fontsize{16}amplitude');
 
-      plot(tR1, yR1, 'LineWidth', 1.5);
-      plot(tR2, yR2, 'LineWidth', 1.5);
-      ylim([-1, 1]);
+      ylim ([-1, 1]);
+
+      for i = 1:numChannels
+        plot(cell2mat(tR(i)), cell2mat(yR(i)), 'LineWidth', 1.5);
+      endfor 
+
+      legend ('location', 'southwest', 'orientation', 'horizontal', 'numcolumns', 3);
     hold off
   endfunction
 
@@ -537,6 +551,7 @@ Main function
 
     [x, ~] = audioread(file1);
 
+    %dB/linear modes
     if (dB)
       [y, fs] = audioread(file2);
       y = gainTodB(y); 
@@ -545,6 +560,9 @@ Main function
       [y, fs] = audioreadChecked(file2);
     end
 
+    numChannelsOut = size(y)(2);
+
+    %downsample
     if (res>1)
       Q = floor(fs/res);
       last = length(x)-mod(length(x), Q);
@@ -552,10 +570,13 @@ Main function
       y = y(1:Q:last, :);
     end
 
+    %plot
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
+
     hold on;
       set(gca, "linewidth", 1, "fontsize", 16)
+
       title(['\fontsize{20}' ttl]);
       if(dB)
         xlabel('\fontsize{16}input (dB)');
@@ -569,16 +590,20 @@ Main function
         ylim([-1, 1]);
       end
 
-      scatter(x(:, 1), y(:, 1), 1, 'filled');
-      scatter(x(:, 2), y(:, 2), 1, 'filled');
+      for i = 1:2:numChannelsOut
+        scatter(x(:, 1), y(:, i), 1, 'filled');
+        scatter(x(:, 2), y(:, i+1), 1, 'filled');
+      endfor
     hold off
   endfunction
 
   function plotVectorscope(file, ttl, fig, sp)
-    %% Plot a vector scope from a stereo file 
+    % Plot a vector scope from a stereo file 
       % See: https://www.rtw.com/en/blog/focus-the-vectorscope.html
     
     [y, fs] = audioreadChecked(file);
+
+    numChannelsOut = size(y)(2);
 
     figure(fig, 'units', 'normalized', 'position', [0.1 0.1 0.8 0.8]);
     subplot(sp(1), sp(2), sp(3));
@@ -593,11 +618,21 @@ Main function
 
       y = y/max(max(y)); %normalize
 
-      [counts, centers] = hist3(y, [100, 100]);
-      counts(counts > 0.001) = 1;
-      imagesc(centers{1}, centers{2}, counts);
-      colormap (1-gray);
+      counts = cell (1, numChannelsOut/2);
+      centers = cell (1, numChannelsOut/2);
+
+      for i = 1:length(counts)
+      %  [counts(i), centers(i)] = hist3(y(:, i:i+1), [100, 100]);
+       % centers(i) = centers(counts(i) > 0.001, :);
+      endfor
+
+      for i = 1:length(counts)
+        %scatter (centers{1}, centers{2}, 1, 'filled');
+      endfor
+
       camroll (45);
+
+     % legend ('location', 'southwest', 'orientation', 'horizontal', 'numcolumns', 3);
     hold off 
   endfunction
 
