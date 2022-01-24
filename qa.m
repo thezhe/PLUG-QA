@@ -45,6 +45,7 @@
   % Current Tasks:
   % - support arbitrary channel count
   % - github action
+  % - windows commands and paths should use '\'
 
   % Future Tasks:
   % - set plugin parameters? May have to write my own PluginRunner
@@ -83,11 +84,11 @@ function qa(Plug, Fs)
     RENDER_CMD = 'soul render';
   elseif (anyStrsEq (EXTS_PLUGIN_RUNNER, PLUG_EXT))
     if (ispc())
-      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunner.exe'];
+      RENDER_CMD = '.\PluginRunner\PluginRunner.exe';
     elseif (ismac())
-      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunnerMac'];
+      RENDER_CMD = './PluginRunner/PluginRunnerMac';
     else
-      RENDER_CMD = ['.' '/' 'PluginRunner' '/' 'PluginRunnerLinux'];
+      RENDER_CMD = './PluginRunner/PluginRunnerLinux';
     endif
   else
     error ('Only .soulpatch, .soul, .vst3, .component, .dll, and .vst plugins supported');
@@ -687,9 +688,9 @@ function qa(Plug, Fs)
 
   function render (wavIn, wavOut)
     if (strEq (RENDER_CMD, 'soul render'))
-      systemChecked ([RENDER_CMD ' ' Plug ' --input=' wavIn ' --output=' wavOut ' --rate=' num2str(audioinfo(wavIn).SampleRate) ' --bitdepth=' num2str(audioinfo(wavIn).BitsPerSample)]); 
+      systemChecked ([RENDER_CMD ' ' PLUG ' --input=' wavIn ' --output=' wavOut ' --rate=' num2str(audioinfo(wavIn).SampleRate) ' --bitdepth=' num2str(audioinfo(wavIn).BitsPerSample)]); 
     else
-      systemChecked ([RENDER_CMD ' ' Plug ' ' wavIn ' ' wavOut]);
+      systemChecked ([RENDER_CMD ' ' PLUG ' ' wavIn ' ' wavOut]);
     endif
   endfunction
 
