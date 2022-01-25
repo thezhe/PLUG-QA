@@ -3,7 +3,7 @@
 PLUG-QA is a Quality Assurance (QA) program for audio plugin development (`.vst3`, `.component`, `.dll`, `.vst`, `.soulpatch`, and `.soul`). It displays step, frequency, gain, waveshaper, vectorscope, and spectrogram responses and renders audio files placed in `audioIn`. It is definitely not an extension of [SOUL-VA](https://github.com/thezhe/SOUL-VA)...
 
 ## NOTE: 
-This project is a work in progress. Only maintained for OCtave on Windows, but should work for other OSes and Matlab with minimal tinkering/debugging.
+This project is a work in progress. Only maintained for Octave on Windows, but should work for other OSes and Matlab with minimal tinkering/debugging.
 
 ## Dependencies:  
 - [Octave 6.4.0](https://www.gnu.org/software/octave/download)
