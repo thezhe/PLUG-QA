@@ -2,6 +2,7 @@
 .vscode
 
 # Test Results
+signals/
 results/
 
 # Non-SOUL Test Plugins
