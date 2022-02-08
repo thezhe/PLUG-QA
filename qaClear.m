@@ -6,3 +6,4 @@ clear all;
 % clear results
 confirm_recursive_rmdir(0);
 rmdir('results', 's');
+rmdir('signals', 's');
