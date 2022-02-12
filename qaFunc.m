@@ -74,10 +74,6 @@ function qaFunc (Plug, Fs)
   %RENDER_CMD
   printf('\nParsing qaFunc arguments\n\n');
 
-  if (Fs < 44100 || Fs > 96000)
-    error ('Fs must be in the range [44100, 96000]');
-  endif
-
   if (anyStrsEq (EXTS_SOUL, PLUG_EXT))
     systemChecked (['soul errors ' PLUG]);
     RENDER_CMD = 'soul render';
