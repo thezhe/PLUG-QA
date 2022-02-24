@@ -13,8 +13,10 @@ close all force
 qaFunc (Plug, 96000);
 mkdir ('results/signals96/');
 movefile ('results/signals*.png/', 'results/signals96/', 'f');
+close all force
 
 %Test @ 192 kHz
 qaFunc (Plug, 192000);
 mkdir ('results/signals192/');
 movefile ('results/signals*.png/', 'results/signals192/', 'f');
+close all force
