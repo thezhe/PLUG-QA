@@ -2,19 +2,47 @@
 
 namespace main
 {
+    using SampleType = float<2>;
+
+    /** A quick and dirty clipper for testing */
+    namespace Clipper
+    {   
+        SampleType process (SampleType x)
+        {
+            return SampleType (clamp(x[0], -0.1f, 0.1f), clamp(x[1], -0.1f, 0.1f));
+        }
+    
+        processor Processor
+        {
+            input stream SampleType in;
+            output stream SampleType out;
+    
+            void run()
+            {   
+                loop
+                {
+                    out << process (in);
+
+                    advance();   
+                }
+            }
+        }
+    }
+    
     graph Processor [[main]]
     {
-        input stream float<4> in;
-        output stream float<4> out;
+        input stream float<2> in;
+        output stream float<2> out;
 
         let 
         {
             pLib = lib::Processor;
+            clipper = Clipper::Processor;
         }
 
         connection
         {       
-            in -> pLib -> out;
+            in -> pLib -> clipper -> out;
         }
     }
 }

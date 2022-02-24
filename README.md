@@ -4,7 +4,7 @@ PLUG-QA is a Quality Assurance (QA) script for audio plugin development (`.vst3`
 
 ## NOTE: 
 - This project is a work in progress. Only maintained for Octave on Windows, but should work for other OSes and Matlab with minimal tinkering.
-- All non-SOUL plugins must support 2-2 channel IO even if that isn't the intended use case. This is not only a requirement for PLUG-QA, but also a common requirement for many DAWs.
+- All non-SOUL plugins must support *-2 channel IO even if that isn't the intended use case. This is not only a requirement for PLUG-QA, but also a common requirement for many DAWs.
 
 ## Dependencies:  
 - [Octave 6.4.0](https://www.gnu.org/software/octave/download) 
