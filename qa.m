@@ -9,14 +9,10 @@ mkdir ('results/signals44.1/');
 movefile ('results/signals*.png/', 'results/signals44.1/', 'f');
 close all force
 
-%Test @ 96 kHz
-qaFunc (Plug, 96000);
-mkdir ('results/signals96/');
-movefile ('results/signals*.png/', 'results/signals96/', 'f');
-close all force
-
-%Test @ 192 kHz
-qaFunc (Plug, 192000);
-mkdir ('results/signals192/');
-movefile ('results/signals*.png/', 'results/signals192/', 'f');
-close all force
+% Add more sampling rates like this 
+%
+% %Test @ 192 kHz
+% qaFunc (Plug, 192000);
+% mkdir ('results/signals192/');
+% movefile ('results/signals*.png/', 'results/signals192/', 'f');
+% close all force
