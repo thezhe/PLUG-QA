@@ -40,7 +40,8 @@ The effect is nonlinear. Even though Magnitude Response is specific to LTI syste
 ![200_0](https://user-images.githubusercontent.com/42720670/147501416-b4dd38a7-3c66-49b3-8b57-07cc84e9f2ea.png)
 ![200_1](https://user-images.githubusercontent.com/42720670/147501419-4961ac5c-b33e-49fc-822b-9c117b886c2c.png)
 ### Example Effect 3: `TheBass` (nonlinearity = 500)
-The effect is nonlinear, but does not pass PLUG-QA. Aliasing paritials greater than -60dB in peak amplitude appear as lines nonparallel to harmonics/inharmonics or random dots in SinSweep Spectrogram (BW). Unrelated to aliasing, DC noise also appears from 0 to 6 seconds. 
+The effect is nonlinear, but does not pass PLUG-QA. Aliasing paritials greater than -60dB in peak amplitude appear as lines nonparallel to harmonics/inharmonics or random dots (circled in red) in SinSweep Spectrogram (BW). Unrelated to aliasing, DC noise also appears from 0 to 6 seconds. 
 ![500_0](https://user-images.githubusercontent.com/42720670/147501429-f1b6f600-2b86-40c1-a913-f888c2f9ef35.png)
-![500_1](https://user-images.githubusercontent.com/42720670/147501430-67f85641-2030-4946-bb75-9630ddbed1b7.png)
+![500_1](https://user-images.githubusercontent.com/42720670/161096263-c281d145-ffbc-4d67-9bb6-64fcd96ed225.png)
+
  
