@@ -4,7 +4,9 @@ PLUG-QA is a Quality Assurance (QA) script for audio effect plugin development (
 ## Dependencies:  
 - [Octave 6.4.0](https://www.gnu.org/software/octave/download)*.
 - [SOUL CLI 1.0.82](https://github.com/soul-lang/SOUL/releases/tag/1.0.82)*.
-- Git Submodules (run an `updateSub` script).
+- [PluginRunner](https://github.com/jatinchowdhury18/PluginRunner).
+
+##### *Install and add to system PATH
 
 ## Usage
 ```matlab
@@ -14,8 +16,6 @@ octave qa.m <plugin path>
 - Logs go to stdout
 - Figures and rendered audio placed in `results/`
 - Non-zero exit code on common errors
-
-##### *Add to System PATH
 
 ## Passing Conditions
 1. No runtime errors.
