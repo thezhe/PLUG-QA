@@ -12,7 +12,7 @@ PLUG-QA is a Quality Assurance (QA) script for audio effect plugin development (
 ```matlab
 octave qa.m <plugin path>
 ```
-#### Outputs (44.1 kHz):
+#### Outputs (44.1/48 kHz):
 - Logs go to stdout
 - Figures and rendered audio placed in `results/`
 - Non-zero exit code on common errors
@@ -29,7 +29,9 @@ octave qa.m <plugin path>
 - Does *not* replace unit testing, although PLUG-QA may not run on plugins that fail common unit tests.
 
 # Examples
-Below are some demonstations of the output figures after running on some [SOUL-VA](https://github.com/thezhe/SOUL-VA) plugins (hereinafter referred to as 'effects'). Please refer to [qaFunc.m](https://github.com/thezhe/PLUG-QA/blob/master/qaFunc.m) for a more in-depth explaination of test cases.
+Below are some demonstations of the output figures* after running on some [SOUL-VA](https://github.com/thezhe/SOUL-VA) plugins (hereinafter referred to as 'effects'). Please refer to [qaFunc.m](https://github.com/thezhe/PLUG-QA/blob/master/qaFunc.m) for a more in-depth explaination of test cases.
+
+##### *Only 44.1 kHz shown, but the same applies to the tests run at 48 kHz.
 
 ### Example 1: `TheDummy`
 The effect passes signals through unmodified; therefore, the output figures plot the test signals. Notice how the step response input is a pulse signal with values 0.5 and 0.25 to measure overshoot/undershoot. The DC IO plot (a.k.a. compressor transfer function) and SinRamp IO plot (a.k.a. waveshaper plot) map, respectively, monotonically increasing DC and the product of a sin wave and ramp signal to their outputs.
